@@ -1,0 +1,404 @@
+'use client';
+
+import { api } from '@/common/api';
+import { postInit } from '@/common/constant.blog';
+import { Post } from '@/common/typedef.blog';
+import Title from '@/components/ui/Title';
+import axios from 'axios';
+import { ChangeEvent, FormEvent, MouseEvent, useEffect, useRef, useState } from 'react';
+import Button from '@/components/Button';
+import {
+  insertString,
+  isValidImageUrl,
+  textAround,
+  textStartWith
+} from '@/helpers/helpers.string';
+import ImageUploadForm from '../ImageUploadForm';
+import {
+  faBold,
+  faItalic,
+  faLink,
+  faListOl,
+  faListUl,
+  faMicroscope,
+  faMinus,
+  faTurnDown
+} from '@fortawesome/free-solid-svg-icons';
+import ReactMarkdown from '@/components/ReactMarkdown';
+import { addLink, isLink, removeLink } from '@/helpers/helper.markdown';
+import InputButton from '@/components/InputButton';
+import IconButton from '@/components/IconButton';
+import SelectBox from '@/components/SelectBox';
+import {
+  pageSectionInit,
+  pageList,
+  PicPositionList
+} from '@/common/constant.irisations';
+import Input from '@/components/Input.V1';
+import { PageSection, PicPosition } from '@/common/typedef.irisations';
+import SwitchPicPosition from '@/components/SwitchPicPosition';
+import DisplayPageCard from './DisplayPageSection';
+import { OptionValue2Page, page2Option } from '@/helpers/helper.casting';
+
+export type AddPageCardProps = {
+  pageSection?: PageSection;
+};
+export default function AddPageCard({ ...props }: AddPageCardProps) {
+  const [pageSection, setPageCard] = useState<PageSection>(
+    props.pageSection || pageSectionInit
+  );
+  // -------------------------------------------------------------------
+  const [cursorPosition, setCursorPosition] = useState<number>(0);
+
+  const [isInputLinkVisible, setInputLinkVisible] = useState<boolean>(false);
+  const [linkUrl, setLinkUrl] = useState('');
+
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+
+  // -------------------------------------------------------------------------------------------------
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const route = pageSection.ident.id
+        ? api.irisations.pageSection.update
+        : api.irisations.pageSection.create;
+
+      const pageSectionUpdated = {
+        ...pageSection,
+        date: { update: new Date(), create: pageSection.date.create }
+      };
+
+      const response = await axios.post(route, pageSectionUpdated);
+
+      setPageCard((prev: PageSection) => ({
+        ...prev,
+        ...response.data.response,
+        id: response.data.response._id
+      }));
+    } catch (error) {}
+  };
+
+  // -------------------------------------------------------------------------------------------------
+  const handleTextCHange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    setPageCard((prev) => ({ ...prev, text: event.target.value }));
+    setCursorPosition(textAreaRef.current?.selectionStart || 0);
+  };
+
+  // ------------ to bold  -------------------------------------------------------------------------------------
+  const handleBold = () => {
+    const result = addTypoAround('__');
+    setPageCard((prev) => ({ ...prev, body: result }));
+  };
+
+  // ------------ to italic  -------------------------------------------------------------------------------------
+  const handleItalic = () => {
+    const result = addTypoAround('_');
+    setPageCard((prev) => ({ ...prev, body: result }));
+  };
+
+  // ------------ addTypoAround  -------------------------------------------------------------------------------------
+  const addTypoAround = (typo: string): string  => {
+    const textArea = textAreaRef.current;
+    if (textArea && window.getSelection())
+      return textAround(
+        pageSection.text,
+        textArea.selectionStart,
+        textArea.selectionEnd,
+        typo
+      );
+    return pageSection.text;
+  };
+
+  // ------------ list unorganised  -------------------------------------------------------------------------------------
+  const handleUL = () => {
+    const result = addTypoStart('1. ');
+    setPageCard((prev) => ({ ...prev, body: result }));
+  };
+  // ------------ tlist organised  -------------------------------------------------------------------------------------
+  const handleOL = () => {
+    const result = addTypoStart('1. ');
+    setPageCard((prev) => ({ ...prev, body: result }));
+  };
+
+  // ------------ add delimiter before -------------------------------------------------------------------------------------
+  const addTypoStart = (delimiter: string): string => {
+    const textArea = textAreaRef.current;
+    if (textArea && window.getSelection())
+      return textStartWith(
+        pageSection.text || '',
+        textArea.selectionStart,
+        textArea.selectionEnd,
+        delimiter
+      );
+    return pageSection.text || '';
+  };
+
+  // ------------Add horizontal bar -------------------------------------------------------------------------------------
+
+  const handleUpload = (url: string) => {
+    const textBeforeCursor = pageSection.text?.slice(0, cursorPosition);
+    const textAfterCursor = pageSection.text?.slice(cursorPosition);
+    const urlSplit = url.split('&')[0];
+    const floatStyle = 'float: left max-width: 100%; max-height: 100px;';
+
+    const imageToAdd = `<img src="${urlSplit}" alt="alt text">`;
+    const newText = `${textBeforeCursor}${imageToAdd}${textAfterCursor}`;
+
+    setPageCard((prev) => ({ ...prev, body: newText }));
+  };
+
+  // ------------Add horizontal bar -------------------------------------------------------------------------------------
+  const handleBR = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    const newText = insertString(pageSection.text, cursorPosition, '<br/>');
+    setPageCard((prev) => ({ ...prev, body: newText }));
+  };
+  // ------------Add horizontal bar -------------------------------------------------------------------------------------
+  const handleHR = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    const newText = insertString(pageSection.text, cursorPosition, '<hr/>');
+    setPageCard((prev) => ({ ...prev, body: newText }));
+  };
+  // ------------Add link  -------------------------------------------------------------------------------------
+  const handleLink = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    const selection = window.getSelection();
+    const textArea = textAreaRef.current;
+    if (textArea && selection) {
+      const start = textArea.selectionStart;
+      const end = textArea.selectionEnd;
+      const textBefore = pageSection.text?.substring(0, start);
+      const textAfter = pageSection.text?.substring(end, pageSection.text.length);
+      const selectedText = pageSection.text?.substring(start, end);
+      let newText:string = selectedText;
+
+      if (isLink(selectedText)) {
+        newText = removeLink(selectedText);
+        const newEditText = `${textBefore}${newText}${textAfter}`;
+        if (newEditText) {
+          setPageCard((prev) => ({ ...prev, body: newEditText }));
+        }
+      } else setInputLinkVisible(true);
+    }
+  };
+
+  //---------------------------------------------------------------------------------------------------------------
+  const handleInputLink = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+
+    setInputLinkVisible(false);
+    const selection = window.getSelection();
+    const textArea = textAreaRef.current;
+    if (textArea && selection) {
+      const start = textArea.selectionStart;
+      const end = textArea.selectionEnd;
+      const textBefore = pageSection.text?.substring(0, start);
+      const textAfter = pageSection.text?.substring(end, pageSection.text.length);
+      const selectedText = pageSection.text?.substring(start, end);
+      let newText = selectedText;
+
+      if (isLink(selectedText)) newText = removeLink(selectedText);
+      else newText = addLink(selectedText, linkUrl);
+      const newEditText = `${textBefore}${newText}${textAfter}`;
+      if (newEditText) {
+        setPageCard((prev) => ({ ...prev, body: newEditText }));
+      }
+    }
+  };
+
+  //---------------------------------------------------------------------------------------------------------------
+
+  const handleKeyUp = () => {
+    setCursorPosition(textAreaRef.current?.selectionStart || 0);
+  };
+  const handeTextareaClick = () => {
+    setCursorPosition(textAreaRef.current?.selectionStart || 0);
+  };
+
+  const text2display = pageSection.text?.replace(/\n/g, '\r\r') || '';
+
+  //---------------------------------------------------------------------------------------------------------------
+  const handleChangePicHeight = (event: ChangeEvent<HTMLInputElement>) => {
+    const newHeight = parseInt(event.target.value, 10);
+    setPageCard((prev) => ({
+      ...prev,
+      image: { ...prev.image, height: newHeight }
+    }));
+  };
+  //---------------------------------------------------------------------------------------------------------------
+  const handleChangePicWidth = (event: ChangeEvent<HTMLInputElement>) => {
+    const newWidth = parseInt(event.target.value, 10);
+
+    setPageCard((prev) => ({
+      ...prev,
+      image: { ...prev.image, width: newWidth }
+    }));
+  };
+  //---------------------------------------------------------------------------------------------------------------
+  const handleChangePicAlt = (event: ChangeEvent<HTMLInputElement>) => {
+    const newPicAlt = event.target.value;
+    setPageCard((prev) => ({
+      ...prev,
+      image: { ...prev.image, alt: newPicAlt }
+    }));
+  };
+  //---------------------------------------------------------------------------------------------------------------
+  const handleChangePicSrc = (event: ChangeEvent<HTMLInputElement>) => {
+    const newPicSrc = event.target.value;
+    if (isValidImageUrl(newPicSrc))
+      setPageCard((prev) => ({
+        ...prev,
+        image: { ...prev.image, src: newPicSrc }
+      }));
+    console.log(' handleChangePicSrc==>', newPicSrc);
+  };
+  //---------------------------------------------------------------------------------------------------------------
+  const handleChangeTitle = (event: ChangeEvent<HTMLInputElement>) => {
+    const newTitle = event.target.value;
+    setPageCard((prev) => ({ ...prev, title: newTitle }));
+  };
+  //---------------------------------------------------------------------------------------------------------------
+  const handleChangeOrder = (event: ChangeEvent<HTMLInputElement>) => {
+    const newOrder = parseInt(event.target.value, 10);
+    setPageCard((prev) => ({ ...prev, sectionOrder: newOrder }));
+  };
+  //---------------------------------------------------------------------------------------------------------------
+  const handlePicPosition = (positionValue: string) => {
+    console.log('handlePicPosition ==>', positionValue);
+    const ImagePosition = PicPositionList.find(
+      (position) => position.value === positionValue
+    );
+
+    setPageCard((prev) => ({
+      ...prev,
+      imagePos: ImagePosition?.value
+        ? parseInt(ImagePosition.value, 10)
+        : PicPosition.Center
+    }));
+  };
+  //---------------------------------------------------------------------------------------------------------------
+  const handleNew = () => {
+    setPageCard({
+      ...pageSectionInit,
+      pageId: pageSection.pageId,
+      sectionOrder: pageSection.sectionOrder + 10
+    });
+  };
+  //---------------------------------------------------------------------------------------------------------------
+  const handleTest =  () => {
+  };
+  // ---------------------------------------------------------------------------------------------------------------
+  const handleOnChangePage =  (event : ChangeEvent<HTMLSelectElement> ) => {
+
+    const newPageId = OptionValue2Page(event.target.value)
+    setPageCard((prev) => ({ ...prev, pageId: newPageId.id }));
+ 
+  };
+  // ---------------------------------------------------------------------------------------------------------------
+  const optionList = page2Option(pageList)
+  return (
+    <div className='min-w-2xl mx-auto p-4'>
+      <Title>Edit page {pageSection.pageId}[{pageSection.status}]</Title>
+      <form onSubmit={handleSubmit}>
+        <div className='header flex flex-row p-2'>
+          <SelectBox
+            optionList={optionList}
+            value={pageSection.pageId}
+            onChange={handleOnChangePage}
+          />
+
+          <IconButton icon={faItalic} onClick={handleItalic} tooltip='Italic' />
+          <IconButton icon={faBold} onClick={handleBold} tooltip='bold' />
+          <IconButton icon={faListUl} onClick={handleUL} tooltip='UL-li' />
+          <IconButton icon={faListOl} onClick={handleUL} tooltip='OL-li' />
+          <IconButton icon={faMinus} onClick={handleHR} tooltip='</hr>' />
+          <IconButton
+            icon={faTurnDown}
+            onClick={handleBR}
+            tooltip='<br/>'
+            className='rotate-45'
+          />
+          <ImageUploadForm onUpload={handleUpload} />
+          {!isInputLinkVisible && (
+            <IconButton icon={faLink} onClick={handleLink} tooltip='link' />
+          )}
+          {isInputLinkVisible && (
+            <InputButton
+              onChange={setLinkUrl}
+              onClick={handleInputLink}
+              placeholder='Url'
+              icon={faLink}
+            />
+          )}
+          <IconButton icon={faMicroscope} onClick={handleTest} />
+        </div>
+        <div className='cardMeta flex '>
+          <Input
+            label='order'
+            value={pageSection.sectionOrder}
+            onChange={handleChangeOrder}
+            type='number'
+            step={10}
+            className={'w-24'}
+          />
+          <Input
+            label='title'
+            value={pageSection.title}
+            onChange={handleChangeTitle}
+          />
+          <Input
+            label='image src'
+            value={pageSection.image?.src}
+            onChange={handleChangePicSrc}
+          />
+          <Input
+            label='image alt'
+            value={pageSection.image?.alt}
+            onChange={handleChangePicAlt}
+          />
+          <Input
+            label='image width'
+            value={pageSection.image?.width}
+            onChange={handleChangePicWidth}
+            type='number'
+            className={'w-32 '}
+          />
+          <Input
+            label='image height'
+            value={pageSection.image?.height}
+            onChange={handleChangePicHeight}
+            type='number'
+            className={'w-32'}
+          />
+          <SwitchPicPosition
+            selectedPicPosition={pageSection.imagePos}
+            onChange={handlePicPosition}
+            name='Image Position'
+          />
+        </div>
+        <textarea
+          ref={textAreaRef}
+          value={pageSection.text}
+          onClick={handeTextareaClick}
+          onChange={handleTextCHange}
+          onKeyUp={handleKeyUp}
+          className='w-full p-2 border border-gray-300 rounded'
+          rows={10}
+          required
+        />
+        <Button type='submit' onClick={handleSubmit}>
+          {pageSection.id ? 'Update' : 'Create'}
+        </Button>
+        <Button type='button' onClick={handleNew}>
+          new
+        </Button>
+        {/* <Button type='button' onClick={handleTest}>
+          Test
+        </Button> */}
+        <div></div>
+      </form>
+
+      <DisplayPageCard pageSection={pageSection} />
+    </div>
+  );
+}

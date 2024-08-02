@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+
+
+}
+
+.markdown p {
+  @apply whitespace-pre-wrap;
+}
+
+.markdown hr {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-color: #d1d5db; /* Utilisation d'une couleur grise pour la bordure */
+  border-width: 1px;
+}
+
+.markdown ul {
+  list-style-type: none; /* Supprime les puces par défaut */
+  margin: 0 auto; /* Centrer la liste horizontalement */
+  font-family: Arial, sans-serif; /* Choix de police */
+  padding-left: 2rem;
+  list-style-position: outside; /* Puces à l'extérieur du texte */
+  padding-left: 1.5em;
+}
+
+
+.markdown li {
+  padding-left: 0.5em; /* Espace entre la puce et le texte */
+}
+
+/* .markdown ul li:before {
+  content: "\2022"; 
+  display: inline-block; 
+  vertical-align: middle; 
+  margin-right: 0.5rem;
+} */
+
+
+.markdown ul li::marker {
+  content: "\2022"; 
+  display: inline-block; 
+  vertical-align: middle; 
+  margin-right: 0.5rem;
+  margin-left: 0.5rem;
+  font-size: 1em;
+  text-align: justify;
+}
+
+
+
+.markdown ol {
+  list-style-type: inside; /* Supprime les puces par défaut */
+  margin: 0 auto; /* Centrer la liste horizontalement */
+  font-family: Arial, sans-serif; /* Choix de police */
+  padding-left: 3rem;
+}
+
+
+.markdown ol li:before {
+  display: inline-block; /* Assure que le contenu est affiché en ligne */
+  vertical-align: middle; /* Aligne verticalement le contenu avec le texte */
+}
+
+
+
+mark {
+  background-color: yellow;
+  padding: .25em;
+}

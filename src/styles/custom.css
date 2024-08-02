@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+
+
+.Zborder {
+    @apply border border-solid border-blue-900 dark:border-yellow-300;
+  }
+

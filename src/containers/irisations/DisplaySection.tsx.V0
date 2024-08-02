@@ -1,0 +1,80 @@
+import { Lang } from '@/common/typedef';
+import {
+  PageSection,
+  PageType,
+  PicPosition
+} from '@/common/typedef.irisations';
+import ReactMarkdown from '@/components/ReactMarkdown';
+import { isValidImageUrl } from '@/helpers/helpers.string';
+import Image from 'next/image';
+import DisplayNewsSection from './DisplayNewsSection';
+import { useLangContext } from '@/app/(project)/irisations/layout';
+
+export type DisplaySectionProps = {
+  section: PageSection;
+  lang: Lang;
+};
+/**
+ * 
+ * @param section: section; 
+ * @param   lang: Lang;
+ * @returns 
+ */
+export default function DisplaySection({
+  ...props
+}: DisplaySectionProps) {
+
+
+
+  const flexDirection = (direction: PicPosition) => {
+    switch (direction) {
+      case PicPosition.Left:
+        return 'flex-row items-start';
+      case PicPosition.Right:
+        return 'flex-row-reverse items-start';
+      default:
+        return 'flex-col justify-center items-center';
+    }
+  };
+
+  const classImg = `flex  ${flexDirection(
+    props.section.image.position || PicPosition.Center
+  )}`;
+
+  if (props.section.ident.pageType === PageType.NEWS)
+    return (
+      <DisplayNewsSection section={props.section} lang={props.lang} />
+    );
+    console.log(' DisplaySection==>', props);
+    
+  return (
+    <section className={`news-${props.section.ident.id}`}>
+      <div className='flex flex-col'>
+        {props.section.ident.title[props.lang] && (
+          <h1 className='py-2 font-bold text-lg text-left'>
+            {props.section.ident.title[props.lang]}
+          </h1>
+        )}
+
+        <div className={classImg  }>
+          {isValidImageUrl(props.section.image?.src) && (
+            <Image
+              className='rounded'
+              src={props.section.image?.src || ''}
+              alt={props.section.image?.alt[props.lang] || ''}
+              width={props.section.image?.width || 0}
+              height={0} // auto ?
+            />
+          )}
+          {props.section.text && (
+            <div className='text-justify p-4'>
+              <ReactMarkdown>
+                {props.section.text[props.lang]}
+              </ReactMarkdown>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
